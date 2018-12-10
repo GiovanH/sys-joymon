@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "log.h"
 #include <time.h>
+#include "mp3.h"
 
 using namespace std;
 
@@ -123,9 +124,11 @@ void setLogging(bool newVal)
 		joyLogFile = ofstream("sdmc:/logs/joy" + to_string(++logFileIndex) + ".c");
 		joyLogFile << "#include \"types.h\"\nstatic const uint16_t step[] = {" << endl;
 		startt = clock();
+        playMp3("/ftpd/pauseoff.mp3");
 	} else {
 		joyLogFile << " 0 };" << endl;
 		joyLogFile.close();
+        playMp3("/ftpd/pauseon.mp3");
 	}
 }
 
