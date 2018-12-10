@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdint.h>
 #include "log.h"
 #include <time.h>
 
@@ -21,6 +22,18 @@ char keysNames[32][32] = {
 	"", "", "", ""
 };
 
+uint16_t keyCodes[32] = {
+	0x04,  0x02,  0x08,  0x01, 
+	0x400, 0x800, 0x10,  0x20,
+	0x40,  0x80,  0x200, 0x100, 
+	//Hat
+	0x06, 0x00, 0x02, 0x04, 
+	0x0,  0x0,  0x0,  0x0, 
+	0x0,  0x0,  0x0,  0x0, 
+	0x0,  0x0,  0x0,  0x0, 
+	0x0,  0x0,  0x0,  0x0, 
+};
+
 ofstream joyLogFile;
 u64 frame = 0;
 clock_t startt;
@@ -33,12 +46,13 @@ bool logging = false;
 void initLogs()
 {
 	mkdir("sdmc:/logs", 0700);
-	joyLogFile = ofstream("sdmc:/logs/joy.log");
 }
 
 void closeLogs(){
 	joyLogFile.close();
 }
+
+uint16_t uButtons = 0, uLeft = 0, uRight = 0, uHat = 0x08;
 
 void writeHidEntry()
 {
@@ -48,27 +62,56 @@ void writeHidEntry()
 	kHeld = hidKeysHeld(CONTROLLER_P1_AUTO);
 	kUp = hidKeysUp(CONTROLLER_P1_AUTO);
 
-	if (kDown != kDownOld || kHeld != kHeldOld || kUp != kUpOld) {
+	uButtons = 0;
+	uLeft = 0;
+	uRight = 0;
+	uHat = 0x08;
+
+	//if (kDown != kDownOld || kHeld != kHeldOld || kUp != kUpOld) {
 		int i;
-		for (i = 0; i < 32; i++) {
-			if (kDown & BIT(i)) (joyLogFile << "D" << keysNames[i] << i << endl);
-			if (kHeld & BIT(i)) (joyLogFile << "H" << keysNames[i] << i << endl);
-			if (kUp & BIT(i))   (joyLogFile << "U" << keysNames[i] << i << endl);
+		//Buttons
+		for (i = 0; i < 12; i++) {
+			if (kHeld & BIT(i)) uButtons |= keyCodes[i];
+			//if (kDown & BIT(i)) uButtons |= keyCodes[i];
+			//if (kUp & BIT(i)) uButtons ^= keyCodes[i];
+			if (kDown & BIT(i)) (joyLogFile << "//Down " << keysNames[i] << i << endl);
+			if (kHeld & BIT(i)) (joyLogFile << "//Held " << keysNames[i] << i << endl);
+			if (kUp & BIT(i))   (joyLogFile << "//Up " << keysNames[i] << i << endl);
 		}
-	}
+		//Hat
+		for (;i < 16; i++) { 
+			if (kHeld & BIT(i)) uHat = keyCodes[i];
+			if (kDown & BIT(i)) (joyLogFile << "//Down " << keysNames[i] << i << endl);
+		}
+		/*
+		//LStick
+		for (i < 20; i++) { 
+			
+		}
+		//RStick
+		for (i < 24; i++) { 
+			
+		}
+		*/
+	//}
 	//Remember one frame back
 	kDownOld = kDown;
 	kHeldOld = kHeld;
 	kUpOld = kUp;
 
-	JoystickPosition pos_left, pos_right;
 
-	hidJoystickRead(&pos_left, CONTROLLER_P1_AUTO, JOYSTICK_LEFT);
-	hidJoystickRead(&pos_right, CONTROLLER_P1_AUTO, JOYSTICK_RIGHT);
+    JoystickPosition pos_left, pos_right;
 
-	joyLogFile << "JLX" << pos_left.dx << "Y" << pos_left.dy << endl;
-	joyLogFile << "JRX" << pos_right.dx << "Y" << pos_right.dy << endl;
-	joyLogFile << endl;
+    //Read the joysticks' position
+    hidJoystickRead(&pos_left, CONTROLLER_P1_AUTO, JOYSTICK_LEFT);
+    hidJoystickRead(&pos_right, CONTROLLER_P1_AUTO, JOYSTICK_RIGHT);
+
+    uLeft += (uint8_t)(pos_left.dx/128);
+    uLeft += (uint8_t)(pos_left.dy/64);
+    uRight += (uint8_t)(pos_right.dx/128);
+    uRight += (uint8_t)(pos_right.dy/64);
+
+	joyLogFile << "    " << uButtons << ", " << uLeft << ", " << uRight << ", " << endl;
 }
 
 void setLogging(bool newVal)
@@ -77,9 +120,11 @@ void setLogging(bool newVal)
 	frame = 0;
 	// Either we just started, or we're wrapping up. Either way,
 	if (logging) {
-		joyLogFile = ofstream("sdmc:/logs/joy" + to_string(++logFileIndex) + ".log");
+		joyLogFile = ofstream("sdmc:/logs/joy" + to_string(++logFileIndex) + ".c");
+		joyLogFile << "#include \"types.h\"\nstatic const uint16_t step[] = {" << endl;
 		startt = clock();
 	} else {
+		joyLogFile << " 0 };" << endl;
 		joyLogFile.close();
 	}
 }
@@ -95,8 +140,8 @@ void inputPoller()
 	}
 
 	if (logging) {
-		joyLogFile << "SEC" << clock() << "-" << startt << "=" << (clock()-startt) << endl;
-		joyLogFile << "F" << frame++ << endl;
+		joyLogFile << "//SEC" << clock() << " - " << startt << " = " << (clock()-startt) << endl;
+		joyLogFile << "//F" << frame++ << endl;
 		writeHidEntry();
 		if (frame > 1000) {
 			// Stop if too long

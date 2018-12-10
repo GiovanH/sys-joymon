@@ -99,7 +99,7 @@ else
 
 DEPENDS	:=	$(OFILES:.o=.d)
 
-all	:	$(OUTPUT).kip
+all	:	$(OUTPUT).kip $(OUTPUT).nro
 
 $(OUTPUT).kip	:	$(OUTPUT).elf
 
