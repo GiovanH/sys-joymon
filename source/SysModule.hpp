@@ -1,5 +1,5 @@
-#pragma once
 #include <switch.h>
+using namespace std;
 
 extern "C"
 {

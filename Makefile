@@ -16,7 +16,7 @@ EXEFS_SRC	:=	exefs_src
 
 KIP_NAME     := sys-joymon
 KIP_HEAP     := 540000
-KIP_TITLEID  := 0100000000000720
+KIP_TITLEID  := 0800000000000720
 
 ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
 

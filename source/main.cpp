@@ -1,14 +1,12 @@
 #include <switch.h>
-
 #include "SysModule.hpp"
+using namespace std;
 //#include "main.h"
 
 //static long frameLength = 3000000L;
 
-int main(int argc, char **argv)
+int main()
 {
-    (void)argc;
-    (void)argv;
     //initLogs();
 
     // while (true)
