@@ -1,77 +1,71 @@
 #include <switch.h>
+// Include the most common headers from the C standard library
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 using namespace std;
 
 extern "C"
 {
+    // Sysmodules should not use applet*.
     u32 __nx_applet_type = AppletType_None;
-    char fake_heap[KIP_HEAP];
-    void checkErrThrow(Result err)
+
+    // Adjust size as needed.
+    //#define KIP_HEAP 0x80000
+    size_t nx_inner_heap_size = KIP_HEAP;
+    char   nx_inner_heap[KIP_HEAP];
+
+    void __libnx_initheap(void)
     {
-        if(R_SUCCEEDED(err)) return;
-        Handle srv;
-        while(R_FAILED(smGetServiceOriginal(&srv, smEncodeName("fatal:u")))) svcSleepThread(1000000000L);
-        IpcCommand c;
-        ipcInitialize(&c);
-        ipcSendPid(&c);
-        struct
-        {
-            u64 magic;
-            u64 cmd_id;
-            u64 result;
-            u64 unknown;
-        } *raw;
-        raw = ipcPrepareHeader(&c, sizeof(*raw));
-        raw->magic = SFCI_MAGIC;
-        raw->cmd_id = 1;
-        raw->result = err;
-        raw->unknown = 0;
-        ipcDispatch(srv);
-        svcCloseHandle(srv);
+        void*  addr = nx_inner_heap;
+        size_t size = nx_inner_heap_size;
+
+        // Newlib
+        extern char* fake_heap_start;
+        extern char* fake_heap_end;
+
+        fake_heap_start = (char*)addr;
+        fake_heap_end   = (char*)addr + size;
     }
-    void __libnx_initheap()
-    {
-        extern char *fake_heap_start;
-        extern char *fake_heap_end;
-        fake_heap_start = fake_heap;
-        fake_heap_end = fake_heap + KIP_HEAP;
-    }
-    void registerFspLr()
-    {
-        if(kernelAbove400()) return;
-        Result rc = fsprInitialize();
-        checkErrThrow(rc);
-        u64 pid;
-        svcGetProcessId(&pid, CUR_PROCESS_HANDLE);
-        rc = fsprRegisterProgram(pid, KIP_TITLEID, FsStorageId_NandSystem, NULL, 0, NULL, 0);
-        checkErrThrow(rc);
-        fsprExit();
-    }
-    void __appInit()
+
+    // Init/exit services, update as needed.
+    void __attribute__((weak)) __appInit(void)
     {
         Result rc;
-        svcSleepThread(10000000000L);
+
+        // Initialize default services.
         rc = smInitialize();
-        checkErrThrow(rc);
-        rc = fsInitialize();
-        checkErrThrow(rc);
-        registerFspLr();
-        rc = fsdevMountSdmc();
-        checkErrThrow(rc);
-        rc = timeInitialize();
-        checkErrThrow(rc);
+        if (R_FAILED(rc))
+            fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_SM));
+
+        // Enable this if you want to use HID.
         rc = hidInitialize();
-        checkErrThrow(rc);
-        Handle hdl;
-        rc = smRegisterService(&hdl, KIP_NAME, false, 1);
-        checkErrThrow(rc);
+        if (R_FAILED(rc))
+            fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_HID));
+
+        //Enable this if you want to use time.
+        rc = timeInitialize();
+        if (R_FAILED(rc))
+            fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_Time));
+
+        //__libnx_init_time();
+
+        rc = fsInitialize();
+        if (R_FAILED(rc))
+            fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_FS));
+
+        fsdevMountSdmc();
     }
-    void __appExit()
+
+    void __attribute__((weak)) userAppExit(void);
+
+    void __attribute__((weak)) __appExit(void)
     {
-        smUnregisterService(KIP_NAME);
+        // Cleanup default services.
         fsdevUnmountAll();
         fsExit();
+        timeExit(); //Enable this if you want to use time.
+        hidExit(); // Enable this if you want to use HID.
         smExit();
-        timeExit();
-        hidExit();
     }
 }

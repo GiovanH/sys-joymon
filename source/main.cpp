@@ -1,20 +1,20 @@
 #include <switch.h>
 #include "SysModule.hpp"
 using namespace std;
-//#include "main.h"
+#include "log.h"
 
-//static long frameLength = 3000000L;
+static long frameLength = 3000L;
 
 int main()
 {
-    //initLogs();
+    initLogs();
 
-    // while (true)
-    // {
-        //inputPoller();
-    //     svcSleepThread(3000000L);
-    // }
+    while (true)
+    {
+        inputPoller();
+        svcSleepThread(frameLength);
+    }
 
-    //closeLogs();
+    closeLogs();
     return 0;
 }
