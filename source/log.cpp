@@ -140,8 +140,7 @@ void inputPoller()
 	}
 
 	if (logging) {
-		joyLogFile << "//SEC" << clock() << " - " << startt << " = " << (clock()-startt) << endl;
-		joyLogFile << "//F" << frame++ << endl;
+//		joyLogFile << "//F" << frame++ << endl;
 		writeHidEntry();
 		if (frame > 1000) {
 			// Stop if too long
