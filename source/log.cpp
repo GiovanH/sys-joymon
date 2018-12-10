@@ -7,6 +7,7 @@
 #include <time.h>
 #include "mp3.h"
 
+
 using namespace std;
 
 //Matrix containing the name of each key. Useful for printing when a key is pressed
@@ -47,10 +48,12 @@ bool logging = false;
 void initLogs()
 {
 	mkdir("sdmc:/logs", 0700);
+	stdout = stderr = fopen("/logs/logging.log", "a");
 }
 
 void closeLogs(){
 	joyLogFile.close();
+	fclose(stdout);
 }
 
 uint16_t uButtons = 0, uLeft = 0, uRight = 0, uHat = 0x08;
@@ -63,7 +66,7 @@ void writeHidEntry()
 	kHeld = hidKeysHeld(CONTROLLER_P1_AUTO);
 	kUp = hidKeysUp(CONTROLLER_P1_AUTO);
 
-	uButtons = 0;
+	// uButtons = 0;
 	uLeft = 0;
 	uRight = 0;
 	uHat = 0x08;
@@ -73,8 +76,8 @@ void writeHidEntry()
 		//Buttons
 		for (i = 0; i < 12; i++) {
 			if (kHeld & BIT(i)) uButtons |= keyCodes[i];
-			//if (kDown & BIT(i)) uButtons |= keyCodes[i];
-			//if (kUp & BIT(i)) uButtons ^= keyCodes[i];
+			if (kDown & BIT(i)) uButtons |= keyCodes[i];
+			if (kUp & BIT(i)) uButtons ^= keyCodes[i];
 			if (kDown & BIT(i)) (joyLogFile << "//Down " << keysNames[i] << i << endl);
 			if (kHeld & BIT(i)) (joyLogFile << "//Held " << keysNames[i] << i << endl);
 			if (kUp & BIT(i))   (joyLogFile << "//Up " << keysNames[i] << i << endl);
