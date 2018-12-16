@@ -119,7 +119,7 @@ void setLogging(bool newVal)
         playMp3("/ftpd/pauseoff.mp3");
 	} else {
 		joyLogFile << " 0 };" << endl;
-		joyLogFile << "static int numsteps = " << frame << ";" << endl;
+		joyLogFile << "const int numsteps = " << frame << ";" << endl;
 		joyLogFile.close();
 		fsdevCommitDevice("Sdmc");
         playMp3("/ftpd/pauseon.mp3");
