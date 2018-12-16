@@ -7,8 +7,9 @@
 #include <time.h>
 #include "mp3.h"
 
-
 using namespace std;
+
+#define MAX_LOG_LENGTH 8000
 
 //Matrix containing the name of each key. Useful for printing when a key is pressed
 char keysNames[32][32] = {
@@ -24,16 +25,12 @@ char keysNames[32][32] = {
 	"", "", "", ""
 };
 
-uint16_t keyCodes[32] = {
+uint16_t keyCodes[16] = {
 	0x04,  0x02,  0x08,  0x01, 
 	0x400, 0x800, 0x10,  0x20,
 	0x40,  0x80,  0x200, 0x100, 
 	//Hat
-	0x06, 0x00, 0x02, 0x04, 
-	0x0,  0x0,  0x0,  0x0, 
-	0x0,  0x0,  0x0,  0x0, 
-	0x0,  0x0,  0x0,  0x0, 
-	0x0,  0x0,  0x0,  0x0, 
+	0x06, 0x00, 0x02, 0x04
 };
 
 ofstream joyLogFile;
@@ -44,11 +41,17 @@ u32 kDownOld = 0, kHeldOld = 0, kUpOld = 0;	// Previous state
 u32 kDown = 0, kHeld = 0, kUp = 0;
 int logFileIndex = 0;
 bool logging = false;
+uint8_t* pseudoL;
+uint8_t* pseudoR;
+uint8_t* pseudoH;
+
+static uint16_t JOY_CENTER = 0b1000000010000000;
 
 void initLogs()
 {
-	mkdir("sdmc:/logs", 0700);
-	stdout = stderr = fopen("/logs/logging.log", "a");
+	mkdir("sdmc:/logs", 0755);
+	mkdir("sdmc:/joy", 0755);
+	stdout = stderr = fopen("/logs/logging.log", "w");
 }
 
 void closeLogs(){
@@ -66,43 +69,25 @@ void writeHidEntry()
 	kHeld = hidKeysHeld(CONTROLLER_P1_AUTO);
 	kUp = hidKeysUp(CONTROLLER_P1_AUTO);
 
-	// uButtons = 0;
-	uLeft = 0;
-	uRight = 0;
+	uButtons = 0;
+	uLeft = JOY_CENTER;
+	uRight = JOY_CENTER;
 	uHat = 0x08;
 
-	//if (kDown != kDownOld || kHeld != kHeldOld || kUp != kUpOld) {
-		int i;
-		//Buttons
-		for (i = 0; i < 12; i++) {
-			if (kHeld & BIT(i)) uButtons |= keyCodes[i];
-			if (kDown & BIT(i)) uButtons |= keyCodes[i];
-			if (kUp & BIT(i)) uButtons ^= keyCodes[i];
-			if (kDown & BIT(i)) (joyLogFile << "//Down " << keysNames[i] << i << endl);
-			if (kHeld & BIT(i)) (joyLogFile << "//Held " << keysNames[i] << i << endl);
-			if (kUp & BIT(i))   (joyLogFile << "//Up " << keysNames[i] << i << endl);
-		}
-		//Hat
-		for (;i < 16; i++) { 
-			if (kHeld & BIT(i)) uHat = keyCodes[i];
-			if (kDown & BIT(i)) (joyLogFile << "//Down " << keysNames[i] << i << endl);
-		}
-		/*
-		//LStick
-		for (i < 20; i++) { 
-			
-		}
-		//RStick
-		for (i < 24; i++) { 
-			
-		}
-		*/
-	//}
-	//Remember one frame back
-	kDownOld = kDown;
-	kHeldOld = kHeld;
-	kUpOld = kUp;
-
+	int i;
+	//Buttons
+	for (i = 0; i < 12; i++) {
+		if (kHeld & BIT(i)) uButtons |= keyCodes[i];
+		//if (kDown & BIT(i)) uButtons |= keyCodes[i];
+		//if (kUp & BIT(i)) uButtons ^= keyCodes[i];
+		// if (kDown & BIT(i)) (joyLogFile << "//Down " << keysNames[i] << i << endl);
+		// if (kHeld & BIT(i)) (joyLogFile << "//Held " << keysNames[i] << i << endl);
+		// if (kUp & BIT(i))   (joyLogFile << "//Up " << keysNames[i] << i << endl);
+	}
+	//Hat
+	for (;i < 16; i++) { 
+		if (kHeld & BIT(i)) uHat = keyCodes[i];
+	}
 
     JoystickPosition pos_left, pos_right;
 
@@ -110,29 +95,44 @@ void writeHidEntry()
     hidJoystickRead(&pos_left, CONTROLLER_P1_AUTO, JOYSTICK_LEFT);
     hidJoystickRead(&pos_right, CONTROLLER_P1_AUTO, JOYSTICK_RIGHT);
 
-    uLeft += (uint8_t)(pos_left.dx/128);
-    uLeft += (uint8_t)(pos_left.dy/64);
-    uRight += (uint8_t)(pos_right.dx/128);
-    uRight += (uint8_t)(pos_right.dy/64);
+    pseudoL = (uint8_t*)(&uLeft);
+    pseudoR = (uint8_t*)(&uRight);
 
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
 	joyLogFile << "    " << uButtons << ", " << uLeft << ", " << uRight << ", " << uHat << ", " endl;
+=======
+=======
+>>>>>>> Stashed changes
+    pseudoL[0] += (uint8_t)(pos_left.dx/128);
+    pseudoL[1] += (uint8_t)(pos_left.dy/128);
+    pseudoR[0] += (uint8_t)(pos_right.dx/128);
+    pseudoR[1] += (uint8_t)(pos_right.dy/128);
+
+	joyLogFile << "    " << uButtons << ", " << uLeft << ", " << uRight << ", " << uHat << ", " << endl;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 }
 
 void setLogging(bool newVal)
 {
 	logging = newVal;
-	frame = 0;
 	// Either we just started, or we're wrapping up. Either way,
 	if (logging) {
-		joyLogFile = ofstream("sdmc:/logs/joy" + to_string(++logFileIndex) + ".c");
+		joyLogFile = ofstream("sdmc:/joy/joy" + to_string(++logFileIndex) + ".c");
 		joyLogFile << "#include \"types.h\"\nstatic const uint16_t step[] = {" << endl;
 		startt = clock();
         playMp3("/ftpd/pauseoff.mp3");
 	} else {
 		joyLogFile << " 0 };" << endl;
+		joyLogFile << "static int numsteps = " << frame << ";" << endl;
 		joyLogFile.close();
+		fsdevCommitDevice("Sdmc");
         playMp3("/ftpd/pauseon.mp3");
 	}
+	frame = 0;
 }
 
 void inputPoller()
@@ -146,9 +146,9 @@ void inputPoller()
 	}
 
 	if (logging) {
-//		joyLogFile << "//F" << frame++ << endl;
+		frame++;
 		writeHidEntry();
-		if (frame > 1000) {
+		if (frame > MAX_LOG_LENGTH) {
 			// Stop if too long
 			setLogging(false);
 		}
