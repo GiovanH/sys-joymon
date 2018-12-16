@@ -115,7 +115,7 @@ void writeHidEntry()
     uRight += (uint8_t)(pos_right.dx/128);
     uRight += (uint8_t)(pos_right.dy/64);
 
-	joyLogFile << "    " << uButtons << ", " << uLeft << ", " << uRight << ", " << endl;
+	joyLogFile << "    " << uButtons << ", " << uLeft << ", " << uRight << ", " << uHat << ", " endl;
 }
 
 void setLogging(bool newVal)
