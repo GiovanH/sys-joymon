@@ -4,7 +4,7 @@ using namespace std;
 #include "log.h"
 #include "mp3.h"
 
-static long frameLength = 8000000L; // ~60fps
+static long frameLength = 6000000L; // ~60fps
 
 int main()
 {

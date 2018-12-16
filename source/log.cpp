@@ -3,8 +3,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdint.h>
+//#include <time.h>
 #include "log.h"
-#include <time.h>
 #include "mp3.h"
 
 using namespace std;
@@ -35,12 +35,14 @@ uint16_t keyCodes[16] = {
 
 ofstream joyLogFile;
 u64 frame = 0;
-clock_t startt;
+//clock_t startt;
 
-u32 kDownOld = 0, kHeldOld = 0, kUpOld = 0;	// Previous state
+// u32 kDownOld = 0, kHeldOld = 0, kUpOld = 0;	// Previous state
 u32 kDown = 0, kHeld = 0, kUp = 0;
+
 int logFileIndex = 0;
 bool logging = false;
+
 uint8_t* pseudoL;
 uint8_t* pseudoR;
 uint8_t* pseudoH;
@@ -51,7 +53,7 @@ void initLogs()
 {
 	mkdir("sdmc:/logs", 0755);
 	mkdir("sdmc:/joy", 0755);
-	stdout = stderr = fopen("/logs/logging.log", "w");
+	stdout = stderr = fopen("/logs/joylog.log", "w");
 }
 
 void closeLogs(){
@@ -98,22 +100,12 @@ void writeHidEntry()
     pseudoL = (uint8_t*)(&uLeft);
     pseudoR = (uint8_t*)(&uRight);
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-	joyLogFile << "    " << uButtons << ", " << uLeft << ", " << uRight << ", " << uHat << ", " endl;
-=======
-=======
->>>>>>> Stashed changes
     pseudoL[0] += (uint8_t)(pos_left.dx/128);
     pseudoL[1] += (uint8_t)(pos_left.dy/128);
     pseudoR[0] += (uint8_t)(pos_right.dx/128);
     pseudoR[1] += (uint8_t)(pos_right.dy/128);
 
 	joyLogFile << "    " << uButtons << ", " << uLeft << ", " << uRight << ", " << uHat << ", " << endl;
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 }
 
 void setLogging(bool newVal)
@@ -122,8 +114,8 @@ void setLogging(bool newVal)
 	// Either we just started, or we're wrapping up. Either way,
 	if (logging) {
 		joyLogFile = ofstream("sdmc:/joy/joy" + to_string(++logFileIndex) + ".c");
-		joyLogFile << "#include \"types.h\"\nstatic const uint16_t step[] = {" << endl;
-		startt = clock();
+		joyLogFile << "#include \"types.h\"\nconst uint16_t step[] = {" << endl;
+		//startt = clock();
         playMp3("/ftpd/pauseoff.mp3");
 	} else {
 		joyLogFile << " 0 };" << endl;
