@@ -56,8 +56,7 @@ uint8_t* pseudoH;
 
 static uint16_t JOY_CENTER = 0b1000000010000000;
 
-void initLogs()
-{
+void initLogs(){
 	mkdir("sdmc:/joy", 0755);
 	mkdir("sdmc:/joy/logs", 0755);
 	mkdir("sdmc:/joy/c", 0755);
@@ -74,14 +73,15 @@ uint16_t uButtonsPrev = 0, uLeftPrev = JOY_CENTER, uRightPrev = JOY_CENTER, uHat
 uint16_t repeats = 0;
 
 uint8_t joyScale(int16_t signd){
+	//if (signd < -32760) return 0;
+	//if (signd > 32760) return 255;
 	if (signd == 0) return 128;
-	float r = ((float)(signd + 32767) / 66634);
+	float r = ((float)(signd + 32767) / 65534);
 	uint8_t uint8 = r * 255;
 	return uint8;
 }
 
-void writeHidEntry()
-{
+void writeHidEntry(){
 	hidScanInput();
 
 	kDown = hidKeysDown(CONTROLLER_P1_AUTO);
@@ -142,8 +142,7 @@ void writeHidEntry()
 
 }
 
-void setLogging(bool newVal)
-{
+void setLogging(bool newVal){
 	logging = newVal;
 	// Either we just started, or we're wrapping up. Either way,
 	if (logging) {
@@ -188,8 +187,7 @@ void updateTime(){
     }
 }
 
-void inputPoller()
-{
+void inputPoller(){
 
 	hidScanInput();
 	u64 kHeld = hidKeysHeld(CONTROLLER_P1_AUTO);
