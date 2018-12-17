@@ -3,8 +3,7 @@
 using namespace std;
 #include "log.h"
 #include "mp3.h"
-
-static long frameLength = 6000000L; // ~60fps
+#include <time.h>
 
 int main()
 {
@@ -15,7 +14,6 @@ int main()
     while (true)
     {
         inputPoller();
-        svcSleepThread(frameLength);
     }
 
     closeLogs();

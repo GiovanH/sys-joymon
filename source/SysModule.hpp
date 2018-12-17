@@ -48,8 +48,6 @@ extern "C"
         if (R_FAILED(rc))
             fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_Time));
 
-        //__libnx_init_time();
-
         rc = fsInitialize();
         if (R_FAILED(rc))
             fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail_FS));

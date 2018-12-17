@@ -9,21 +9,21 @@
 
 using namespace std;
 
-#define MAX_LOG_LENGTH 8000
+#define MAX_LOG_LENGTH 4000
 
 //Matrix containing the name of each key. Useful for printing when a key is pressed
-char keysNames[32][32] = {
-	"KEY_A", "KEY_B", "KEY_X", "KEY_Y",
-	"KEY_LSTICK", "KEY_RSTICK", "KEY_L", "KEY_R",
-	"KEY_ZL", "KEY_ZR", "KEY_PLUS", "KEY_MINUS",
-	"KEY_DLEFT", "KEY_DUP", "KEY_DRIGHT", "KEY_DDOWN",
-	"KEY_LSTICK_LEFT", "KEY_LSTICK_UP", "KEY_LSTICK_RIGHT",
-	    "KEY_LSTICK_DOWN",
-	"KEY_RSTICK_LEFT", "KEY_RSTICK_UP", "KEY_RSTICK_RIGHT",
-	    "KEY_RSTICK_DOWN",
-	"KEY_SL", "KEY_SR", "KEY_TOUCH", "",
-	"", "", "", ""
-};
+// char keysNames[32][32] = {
+// 	"KEY_A", "KEY_B", "KEY_X", "KEY_Y",
+// 	"KEY_LSTICK", "KEY_RSTICK", "KEY_L", "KEY_R",
+// 	"KEY_ZL", "KEY_ZR", "KEY_PLUS", "KEY_MINUS",
+// 	"KEY_DLEFT", "KEY_DUP", "KEY_DRIGHT", "KEY_DDOWN",
+// 	"KEY_LSTICK_LEFT", "KEY_LSTICK_UP", "KEY_LSTICK_RIGHT",
+// 	    "KEY_LSTICK_DOWN",
+// 	"KEY_RSTICK_LEFT", "KEY_RSTICK_UP", "KEY_RSTICK_RIGHT",
+// 	    "KEY_RSTICK_DOWN",
+// 	"KEY_SL", "KEY_SR", "KEY_TOUCH", "",
+// 	"", "", "", ""
+// };
 
 uint16_t keyCodes[16] = {
 	0x04,  0x02,  0x08,  0x01, 
@@ -33,8 +33,15 @@ uint16_t keyCodes[16] = {
 	0x06, 0x00, 0x02, 0x04
 };
 
+
+static const int fpsGoal = 65;
+time_t lastTime = time(NULL);
+uint timeFrame = 0;
+
+static long frameLength = 4280000L;
+
 ofstream joyLogFile;
-u64 frame = 0;
+u64 lineNum = 0;
 //clock_t startt;
 
 // u32 kDownOld = 0, kHeldOld = 0, kUpOld = 0;	// Previous state
@@ -51,17 +58,20 @@ static uint16_t JOY_CENTER = 0b1000000010000000;
 
 void initLogs()
 {
-	mkdir("sdmc:/logs", 0755);
 	mkdir("sdmc:/joy", 0755);
-	stdout = stderr = fopen("/logs/joylog.log", "w");
+	mkdir("sdmc:/joy/logs", 0755);
+	mkdir("sdmc:/joy/c", 0755);
+	//stdout = stderr = fopen("/joy/logs/joylog.log", "w");
 }
 
 void closeLogs(){
 	joyLogFile.close();
-	fclose(stdout);
+	//fclose(stdout);
 }
 
 uint16_t uButtons = 0, uLeft = 0, uRight = 0, uHat = 0x08;
+uint16_t uButtonsPrev = 0, uLeftPrev = 0, uRightPrev = 0, uHatPrev = 0x08;
+uint16_t repeats = 0;
 
 void writeHidEntry()
 {
@@ -82,6 +92,7 @@ void writeHidEntry()
 		if (kHeld & BIT(i)) uButtons |= keyCodes[i];
 		//if (kDown & BIT(i)) uButtons |= keyCodes[i];
 		//if (kUp & BIT(i)) uButtons ^= keyCodes[i];
+
 		// if (kDown & BIT(i)) (joyLogFile << "//Down " << keysNames[i] << i << endl);
 		// if (kHeld & BIT(i)) (joyLogFile << "//Held " << keysNames[i] << i << endl);
 		// if (kUp & BIT(i))   (joyLogFile << "//Up " << keysNames[i] << i << endl);
@@ -105,7 +116,18 @@ void writeHidEntry()
     pseudoR[0] += (uint8_t)(pos_right.dx/128);
     pseudoR[1] += (uint8_t)(pos_right.dy/128);
 
-	joyLogFile << "    " << uButtons << ", " << uLeft << ", " << uRight << ", " << uHat << ", " << endl;
+    if (uButtons == uButtonsPrev && uLeft == uLeftPrev && uRight == uRightPrev && uHat == uHatPrev){
+    	repeats++;
+    } else {
+		joyLogFile << "    " << uButtonsPrev << ", " << uLeftPrev << ", " << uRightPrev << ", " << uHatPrev << ", " << repeats << ", " << endl;
+    	uButtonsPrev = uButtons;
+    	uLeftPrev = uLeft;
+    	uRightPrev = uRight;
+    	uHatPrev = uHat;
+    	repeats = 0;
+    	lineNum++;
+    }
+
 }
 
 void setLogging(bool newVal)
@@ -113,22 +135,50 @@ void setLogging(bool newVal)
 	logging = newVal;
 	// Either we just started, or we're wrapping up. Either way,
 	if (logging) {
-		joyLogFile = ofstream("sdmc:/joy/joy" + to_string(++logFileIndex) + ".c");
-		joyLogFile << "#include \"types.h\"\nconst uint16_t step[] = {" << endl;
+		joyLogFile = ofstream("sdmc:/joy/c/joy" + to_string(++logFileIndex) + ".c");
+		joyLogFile << "#include \"types.h\"\nuint16_t step[] = {" << endl;
 		//startt = clock();
         playMp3("/ftpd/pauseoff.mp3");
 	} else {
 		joyLogFile << " 0 };" << endl;
-		joyLogFile << "static int numsteps = " << frame << ";" << endl;
+		joyLogFile << "static int numsteps = " << lineNum << ";" << endl;
 		joyLogFile.close();
 		fsdevCommitDevice("Sdmc");
         playMp3("/ftpd/pauseon.mp3");
 	}
-	frame = 0;
+	lineNum = 0;
+}
+
+void updateTime(){
+	timeFrame++;
+
+	static float fps; 
+    static time_t unixTime = time(NULL);
+
+    int diff = unixTime - lastTime;
+    if (diff > 5){
+    	fps = timeFrame/diff;
+
+    	// stdout = fopen("/joy/logs/joytimelog.log", "a");
+    	// printf("FL %li, %u frames passed in %u seconds, %f fps; ", frameLength, timeFrame, diff, fps);
+
+    					   //Should be LONGER when FAST, i.e. when fps-fpsgoal > 0
+    	long newFrameLength = frameLength + (long)((fps-fpsGoal)*10000);
+
+    	if (newFrameLength < 2500000L) {newFrameLength = 5000000L;}
+
+    	// printf("new FL %li\n", newFrameLength);
+    	// fclose(stdout);
+
+    	lastTime = unixTime;
+    	frameLength = newFrameLength;
+    	timeFrame = 0;
+    }
 }
 
 void inputPoller()
 {
+
 	hidScanInput();
 	u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
 
@@ -138,12 +188,13 @@ void inputPoller()
 	}
 
 	if (logging) {
-		frame++;
 		writeHidEntry();
-		if (frame > MAX_LOG_LENGTH) {
+		if (lineNum > MAX_LOG_LENGTH) {
 			// Stop if too long
 			setLogging(false);
 		}
 	}
-	//svcSleepThread(3000000L);
+
+    updateTime();
+    svcSleepThread(frameLength);
 }
