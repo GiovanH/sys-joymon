@@ -73,6 +73,13 @@ uint16_t uButtons = 0, uLeft = 0, uRight = 0, uHat = 0x08;
 uint16_t uButtonsPrev = 0, uLeftPrev = 0, uRightPrev = 0, uHatPrev = 0x08;
 uint16_t repeats = 0;
 
+uint8_t joyScale(int16_t signd){
+	if (signd == 0) return 128;
+	float r = ((float)(signd + 32767) / 66634);
+	uint8_t uint8 = r * 255;
+	return uint8;
+}
+
 void writeHidEntry()
 {
 	hidScanInput();
@@ -111,10 +118,15 @@ void writeHidEntry()
     pseudoL = (uint8_t*)(&uLeft);
     pseudoR = (uint8_t*)(&uRight);
 
-    pseudoL[0] += (uint8_t)(pos_left.dx/128);
-    pseudoL[1] += (uint8_t)(pos_left.dy/128);
-    pseudoR[0] += (uint8_t)(pos_right.dx/128);
-    pseudoR[1] += (uint8_t)(pos_right.dy/128);
+    // 16-bit signed integer
+    // to
+    // 8-bit unsigned integer
+    // preserving the ratio
+
+    pseudoL[0] += joyScale(pos_left.dx);
+    pseudoL[1] += joyScale(pos_left.dy);
+    pseudoR[0] += joyScale(pos_right.dx);
+    pseudoR[1] += joyScale(pos_right.dy);
 
     if (uButtons == uButtonsPrev && uLeft == uLeftPrev && uRight == uRightPrev && uHat == uHatPrev){
     	repeats++;
