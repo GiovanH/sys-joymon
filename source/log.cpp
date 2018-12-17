@@ -70,7 +70,7 @@ void closeLogs(){
 }
 
 uint16_t uButtons = 0, uLeft = 0, uRight = 0, uHat = 0x08;
-uint16_t uButtonsPrev = 0, uLeftPrev = 0, uRightPrev = 0, uHatPrev = 0x08;
+uint16_t uButtonsPrev = 0, uLeftPrev = JOY_CENTER, uRightPrev = JOY_CENTER, uHatPrev = 0x08;
 uint16_t repeats = 0;
 
 uint8_t joyScale(int16_t signd){
@@ -123,10 +123,10 @@ void writeHidEntry()
     // 8-bit unsigned integer
     // preserving the ratio
 
-    pseudoL[0] += joyScale(pos_left.dx);
-    pseudoL[1] += joyScale(pos_left.dy);
-    pseudoR[0] += joyScale(pos_right.dx);
-    pseudoR[1] += joyScale(pos_right.dy);
+    pseudoL[0] = joyScale(pos_left.dx);
+    pseudoL[1] = joyScale(pos_left.dy);
+    pseudoR[0] = joyScale(pos_right.dx);
+    pseudoR[1] = joyScale(pos_right.dy);
 
     if (uButtons == uButtonsPrev && uLeft == uLeftPrev && uRight == uRightPrev && uHat == uHatPrev){
     	repeats++;
@@ -192,10 +192,10 @@ void inputPoller()
 {
 
 	hidScanInput();
-	u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
+	u64 kHeld = hidKeysHeld(CONTROLLER_P1_AUTO);
 
 	// Toggle recording with <- + ->
-	if ((kDown & KEY_DLEFT) && (kDown & KEY_DRIGHT)) {
+	if ((kHeld & KEY_LSTICK) && (kHeld & KEY_RSTICK)) {
 		setLogging(!logging);
 	}
 
