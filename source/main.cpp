@@ -1,9 +1,8 @@
 #include <switch.h>
 #include "SysModule.hpp"
-using namespace std;
 #include "log.h"
 #include "mp3.h"
-#include <time.h>
+using namespace std;
 
 int main()
 {

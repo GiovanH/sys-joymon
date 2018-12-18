@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdint.h>
+//#include <libconfig.h++>
 //#include <time.h>
 #include "log.h"
 #include "mp3.h"
@@ -34,11 +35,11 @@ uint16_t keyCodes[16] = {
 };
 
 
-static const int fpsGoal = 65;
-time_t lastTime = time(NULL);
-uint timeFrame = 0;
+//int fpsGoal = 30;
+//time_t lastTime = time(NULL);
+//uint timeFrame = 0;
 
-static long frameLength = 4280000L;
+static long frameLength = 12000000L;
 
 ofstream joyLogFile;
 u64 lineNum = 0;
@@ -61,6 +62,30 @@ void initLogs(){
 	mkdir("sdmc:/joy/logs", 0755);
 	mkdir("sdmc:/joy/c", 0755);
 	//stdout = stderr = fopen("/joy/logs/joylog.log", "w");
+}
+
+long read_long (const char* file_name)
+{
+  FILE* file = fopen (file_name, "r");
+  long i = 0;
+  fscanf (file, "%ld", &i);    
+  fclose (file); 
+  return i;       
+}
+
+void updateConfig(){
+	ofstream settingsLog = ofstream("sdmc:/joy/logs/setting.log");
+	settingsLog << "Framelength was previously " << frameLength << endl;
+
+	frameLength = read_long("sdmc:/joy/config_framelength");
+
+	// libconfig::Config cfg;
+	// cfg.readFile("sdmc:/joy/config.cfg");
+	// fpsGoal = cfg.lookup("fpsGoal");
+
+	settingsLog << "Framelength is now at " << frameLength << endl;
+	settingsLog.close();
+	return;
 }
 
 void closeLogs(){
@@ -160,32 +185,44 @@ void setLogging(bool newVal){
 	lineNum = 0;
 }
 
-void updateTime(){
-	timeFrame++;
+// static long MIN_FRAME_LENGTH = 2500000L;
 
-	static float fps; 
-    static time_t unixTime = time(NULL);
+// void updateTime(){
+// 	timeFrame++;
 
-    int diff = unixTime - lastTime;
-    if (diff > 5){
-    	fps = timeFrame/diff;
+// 	static float fps; 
+//     static time_t unixTime = time(NULL);
 
-    	// stdout = fopen("/joy/logs/joytimelog.log", "a");
-    	// printf("FL %li, %u frames passed in %u seconds, %f fps; ", frameLength, timeFrame, diff, fps);
+//     int diff = unixTime - lastTime;
+//     if (diff > 0){
+//     	fps = timeFrame/diff;
 
-    					   //Should be LONGER when FAST, i.e. when fps-fpsgoal > 0
-    	long newFrameLength = frameLength + (long)((fps-fpsGoal)*10000);
+//     	ofstream timeLongStrm = ofstream("sdmc:/joy/logs/timesetting.log");
 
-    	if (newFrameLength < 2500000L) {newFrameLength = 5000000L;}
+// 		timeLongStrm << "Time: " << unixTime << endl;
+// 		timeLongStrm << "Last Time: " << lastTime << endl;
+// 		timeLongStrm << "Diff: " << diff << endl;
+// 		timeLongStrm << endl;
+// 		timeLongStrm << "FPS: " << fps << endl;
+// 		timeLongStrm << "FPS Goal: " << fpsGoal << endl;
+// 		timeLongStrm << endl;
+// 		timeLongStrm << "Framelength: " << frameLength << endl;
+// 		timeLongStrm << "Time frames: " << timeFrame << endl;
 
-    	// printf("new FL %li\n", newFrameLength);
-    	// fclose(stdout);
+//     					   //Should be LONGER when FAST, i.e. when fps-fpsgoal > 0
+//     	long newFrameLength = frameLength + (long)((fps-fpsGoal)*10000);
 
-    	lastTime = unixTime;
-    	frameLength = newFrameLength;
-    	timeFrame = 0;
-    }
-}
+//     	if (newFrameLength < MIN_FRAME_LENGTH) {newFrameLength = MIN_FRAME_LENGTH;}
+
+// 		timeLongStrm << "New FL: " << newFrameLength << endl;
+// 		timeLongStrm.close();
+// 		fsdevCommitDevice("Sdmc");
+
+//     	frameLength = newFrameLength;
+//     	timeFrame = 0;
+//     	lastTime = unixTime;
+//     }
+// }
 
 void inputPoller(){
 
@@ -194,6 +231,7 @@ void inputPoller(){
 
 	// Toggle recording with <- + ->
 	if ((kHeld & KEY_LSTICK) && (kHeld & KEY_RSTICK)) {
+		updateConfig();
 		setLogging(!logging);
 	}
 
@@ -204,7 +242,8 @@ void inputPoller(){
 			setLogging(false);
 		}
 	}
+	//updateTime();
 
-    updateTime();
+    
     svcSleepThread(frameLength);
 }
